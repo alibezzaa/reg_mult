@@ -1,0 +1,70 @@
+library(car) # vérifier la multicollinéarité
+library(ggplot2) # nuage de points
+library(QuantPsyc) # lm.beta
+
+
+#### Premier exemple ####
+
+## importation et épuration des données
+
+donnees = readxl::read_xlsx("laptops.xlsx")
+names(donnees) = c("Prix", "Taille", "RAM", "Disque", "Ports", "Marque", "Poids")
+head(donnees)
+summary(donnees)
+
+# nuage de points
+
+nuage = ggplot(data = donnees, aes(Disque,Prix))
+nuage + geom_point() + geom_smooth(method = "lm")
+
+## modèle linéaire simple
+
+model1 = lm(Prix~ Disque, data = donnees)
+summary(model1)
+sqrt(0.06903)
+cor(donnees$Prix, donnees$Disque)
+
+# modèle linéaire multiple
+
+model2 = lm(Prix~ Disque + Taille + Ports + Poids + RAM , data = donnees)
+summary(model2)
+
+# test de multicollinéarité
+
+vif(model2) # variance inflation factor 
+1/vif(model2)
+cor(donnees[,-6])
+model3 = lm(Poids~ Taille + Disque + Ports + RAM, data = donnees) # poids comme variable dépendante
+summary(model3) 
+vif1= (1/(1-0.8086)) # formule du VIF
+vif1
+cor(donnees$Taille, donnees$Poids)
+
+# modèle sans variable taille
+
+model4 = lm(Prix ~ Disque  + Poids + Ports + RAM , data = donnees)
+summary(model4)
+vif(model4)
+
+# modèle sans taille ni RAM
+
+model5 = lm(Prix ~ Disque  + Poids + Ports  , data = donnees)
+summary(model5)
+vif(model5)
+
+# l'importance des coefficients de régression
+
+lm.beta(model5) # coefficients centré réduits
+confint(model5) # 95% intervalle de confiance 
+
+# test de l'auto-corrélation
+
+durbinWatsonTest(model5)
+
+# analyse des résidus
+
+donnees$résidus = rstandard(model5)
+hist(donnees$résidus)
+donnees$prévisions = fitted(model5)
+nuage = ggplot(donnees, aes(prévisions, résidus))
+nuage + geom_point() + geom_smooth(method = "lm" ,  colour= "Blue") + labs( x= "Valeurs prédites" ,  y = "Résidus normalisés")
